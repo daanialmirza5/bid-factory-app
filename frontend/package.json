@@ -1,6 +1,18 @@
 {
   "name": "frontend",
   "private": true,
+  "appManifest": {
+    "id": "team_hackher.bid-factory",
+    "publisher": "team_hackher",
+    "name": "Bid Factory",
+    "description": "AI-powered RFP analysis, compliance verification, and proposal generation platform.",
+    "icon": "./icon.svg",
+    "categories": [
+      "custom"
+    ],
+    "mode": "free",
+    "authenticated": true
+  },
   "version": "0.0.0",
   "type": "module",
   "scripts": {

@@ -8,7 +8,9 @@ from backend.api import routes
 from backend.main import app
 from backend.models.entities import Bid, RFP
 from backend.schemas.orchestration import BidAnalysisResult
-from backend.services.rocketride_service import AI_UNAVAILABLE, RocketRideService, RocketRideServiceError
+from backend.services import rocketride_service as rr
+from backend.services.orchestration import BidAnalysisOrchestrator
+from backend.services.rocketride_service import AI_UNAVAILABLE, RocketRideService, RocketRideServiceError, build_pipeline_payload
 from backend.utils.config import get_settings
 
 
@@ -119,3 +121,40 @@ def test_failed_analysis_returns_503() -> None:
         assert response.json()["errors"] == ["RocketRide pipeline execution failed."]
     finally:
         routes.bid_analysis_orchestrator = original
+
+
+def test_pipeline_payload_carries_instructions_then_rfp_text() -> None:
+    payload = build_pipeline_payload("1. The supplier must provide 24/7 support.")
+
+    assert payload.startswith("You are a requirements extraction engine.")
+    assert "Respond with ONLY a JSON array" in payload
+    assert payload.endswith("RFP TEXT:\n1. The supplier must provide 24/7 support.")
+
+
+def test_document_without_text_is_reported_without_calling_rocketride(monkeypatch) -> None:
+    monkeypatch.setenv("ROCKETRIDE_URI", "https://rocketride.invalid")
+    monkeypatch.setenv("ROCKETRIDE_APIKEY", "test-placeholder")
+    monkeypatch.setattr(rr, "extract_text", lambda filename, document: "  \n")
+
+    with pytest.raises(RocketRideServiceError) as exc_info:
+        asyncio.run(RocketRideService()._run_pipeline(make_bid(), b"doc"))
+
+    assert exc_info.value.public_message == "No readable text was found in the document."
+
+
+def test_public_message_reaches_analysis_result_but_internal_detail_does_not(fallback) -> None:
+    fallback(False)
+
+    class StartFailure(RocketRideService):
+        async def _run_pipeline(self, bid, document):
+            raise RocketRideServiceError("internal secret-detail", "The AI pipeline could not start on RocketRide.")
+
+    class NoExtractor:
+        def extract(self, text):
+            raise AssertionError("must not be called")
+
+    result = asyncio.run(BidAnalysisOrchestrator(StartFailure(), NoExtractor()).analyze(make_bid(), b"doc"))
+
+    assert result.processing_status == "failed"
+    assert result.errors == ["The AI pipeline could not start on RocketRide."]
+    assert "secret-detail" not in str(result)

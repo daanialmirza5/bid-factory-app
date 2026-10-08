@@ -195,7 +195,7 @@ const BidDetail = () => {
                             <div className="stage-content">
                                 <div className="stage-title">Document Parsing & Requirement Extraction</div>
                                 {bid.processing_status === 'failed' && (
-                                    <div className="text-error text-sm mt-1" style={{ color: 'var(--status-error)', fontWeight: 600 }}>GEMINI PROVIDER QUOTA EXCEEDED</div>
+                                    <div className="text-error text-sm mt-1" style={{ color: 'var(--status-error)', fontWeight: 600 }}>Requirement extraction failed. Re-run the analysis from New RFP to see the reason.</div>
                                 )}
                             </div>
                         </div>
