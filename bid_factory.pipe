@@ -3,6 +3,7 @@
     {
       "id": "webhook_1",
       "provider": "webhook",
+      "name": "RFP Text Intake",
       "config": {
         "hideForm": true,
         "mode": "Source",
@@ -19,10 +20,12 @@
       }
     },
     {
-      "id": "parse_1",
-      "provider": "parse",
-      "name": "Document Parser",
-      "config": {},
+      "id": "question_1",
+      "provider": "question",
+      "name": "Prepare RFP Text for AI",
+      "config": {
+        "type": "question"
+      },
       "ui": {
         "position": {
           "x": 240,
@@ -33,61 +36,8 @@
       },
       "input": [
         {
-          "lane": "tags",
-          "from": "webhook_1"
-        }
-      ]
-    },
-    {
-      "id": "question_1",
-      "provider": "question",
-      "name": "Prepare RFP Text for AI",
-      "config": {
-        "type": "question"
-      },
-      "ui": {
-        "position": {
-          "x": 472,
-          "y": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      },
-      "input": [
-        {
           "lane": "text",
-          "from": "parse_1"
-        }
-      ]
-    },
-    {
-      "id": "prompt_1",
-      "provider": "prompt",
-      "name": "Requirement Extraction Instructions",
-      "config": {
-        "instructions": [
-          "Extract only requirements explicitly present in the supplied RFP text.",
-          "Split compound requirements into separate atomic requirements.",
-          "Preserve the original requirement wording as much as possible.",
-          "Preserve source page and section information when available.",
-          "Return only a JSON array of requirement objects with fields requirement_id, requirement_text, category, priority, deadline, compliance_type, source_section, and source_page.",
-          "Use null for unavailable optional fields.",
-          "Never invent requirements, deadlines, priorities, certifications, capabilities, or compliance claims.",
-          "Do not generate company answers or claim that the company satisfies anything."
-        ]
-      },
-      "ui": {
-        "position": {
-          "x": 700,
-          "y": 80
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      },
-      "input": [
-        {
-          "lane": "questions",
-          "from": "question_1"
+          "from": "webhook_1"
         }
       ]
     },
@@ -107,7 +57,7 @@
       },
       "ui": {
         "position": {
-          "x": 928,
+          "x": 472,
           "y": 80
         },
         "nodeType": "default",
@@ -116,28 +66,7 @@
       "input": [
         {
           "lane": "questions",
-          "from": "prompt_1"
-        }
-      ]
-    },
-    {
-      "id": "response_table_1",
-      "provider": "response_table",
-      "config": {
-        "laneName": "table"
-      },
-      "ui": {
-        "position": {
-          "x": 472,
-          "y": 12
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      },
-      "input": [
-        {
-          "lane": "table",
-          "from": "parse_1"
+          "from": "question_1"
         }
       ]
     },
@@ -150,7 +79,7 @@
       },
       "ui": {
         "position": {
-          "x": 1156,
+          "x": 700,
           "y": 80
         },
         "nodeType": "default",
@@ -162,33 +91,12 @@
           "from": "llm_gemini_1"
         }
       ]
-    },
-    {
-      "id": "response_text_1",
-      "provider": "response_text",
-      "config": {
-        "laneName": "text"
-      },
-      "ui": {
-        "position": {
-          "x": 472,
-          "y": 138
-        },
-        "nodeType": "default",
-        "formDataValid": true
-      },
-      "input": [
-        {
-          "lane": "text",
-          "from": "parse_1"
-        }
-      ]
     }
   ],
   "name": "Bid-Factory RFP Requirement Extraction",
   "project_id": "70dfea6f-6fdf-4222-952d-4f93bda1d0c5",
   "version": 1,
-  "docRevision": 4,
+  "docRevision": 5,
   "isLocked": false,
   "snapToGrid": true,
   "snapGridSize": [

@@ -78,8 +78,8 @@ class BidAnalysisOrchestrator:
                 source_metadata=segments,
                 extraction_mode=extraction_mode,
             )
-        except RocketRideServiceError:
-            return self._failed(bid, "RocketRide pipeline execution failed.")
+        except RocketRideServiceError as exc:
+            return self._failed(bid, exc.public_message or "RocketRide pipeline execution failed.")
         except (PipelineOutputError, ValueError, TypeError) as exc:
             return self._failed(bid, str(exc))
         except Exception:

@@ -46,9 +46,8 @@ const NewRfp = () => {
             try {
                 const analysis = await API.analyzeBid(res.bid_id);
 
-                if (analysis.errors && analysis.errors.some((e: string) => e.includes('429') || e.includes('503') || e.includes('LLM error') || e.includes('RocketRide'))) {
-                    setPipelineState('failed');
-                } else if (analysis.processing_status === 'failed') {
+                if (analysis.processing_status === 'failed' || analysis.errors?.length) {
+                    setUploadError(analysis.errors?.[0] ?? 'The analysis could not be completed.');
                     setPipelineState('failed');
                 } else {
                     setPipelineState('completed');
@@ -142,7 +141,7 @@ const NewRfp = () => {
                                 <div className="stage-title">AI Requirement Extraction</div>
                                 <div className="stage-desc">Groq via RocketRide</div>
                                 {pipelineState === 'failed' && (
-                                    <div style={{ color: 'var(--status-error)', fontSize: '0.875rem', marginTop: '0.25rem', fontWeight: 600 }}>Groq API error — pipeline failed</div>
+                                    <div style={{ color: 'var(--status-error)', fontSize: '0.875rem', marginTop: '0.25rem', fontWeight: 600 }}>{uploadError || 'Requirement extraction failed.'}</div>
                                 )}
                             </div>
                         </div>
@@ -179,7 +178,7 @@ const NewRfp = () => {
                                     <XCircle size={20} /> PIPELINE EXCEPTION
                                 </div>
                                 <p className="text-muted text-sm my-2">
-                                    AI extraction is temporarily unavailable because the configured Groq provider returned an error.
+                                    {uploadError || 'The analysis could not be completed.'}
                                 </p>
                                 <div className="flex gap-4 mt-2">
                                     <button className="btn btn-outline" onClick={() => { setIsUploading(false); setPipelineState(null); setFiles([]); }}>Upload Different Batch</button>
