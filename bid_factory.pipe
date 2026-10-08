@@ -1,0 +1,198 @@
+{
+  "components": [
+    {
+      "id": "webhook_1",
+      "provider": "webhook",
+      "config": {
+        "hideForm": true,
+        "mode": "Source",
+        "parameters": {},
+        "type": "webhook"
+      },
+      "ui": {
+        "position": {
+          "x": 12,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      }
+    },
+    {
+      "id": "parse_1",
+      "provider": "parse",
+      "name": "Document Parser",
+      "config": {},
+      "ui": {
+        "position": {
+          "x": 240,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "tags",
+          "from": "webhook_1"
+        }
+      ]
+    },
+    {
+      "id": "question_1",
+      "provider": "question",
+      "name": "Prepare RFP Text for AI",
+      "config": {
+        "type": "question"
+      },
+      "ui": {
+        "position": {
+          "x": 472,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "text",
+          "from": "parse_1"
+        }
+      ]
+    },
+    {
+      "id": "prompt_1",
+      "provider": "prompt",
+      "name": "Requirement Extraction Instructions",
+      "config": {
+        "instructions": [
+          "Extract only requirements explicitly present in the supplied RFP text.",
+          "Split compound requirements into separate atomic requirements.",
+          "Preserve the original requirement wording as much as possible.",
+          "Preserve source page and section information when available.",
+          "Return only a JSON array of requirement objects with fields requirement_id, requirement_text, category, priority, deadline, compliance_type, source_section, and source_page.",
+          "Use null for unavailable optional fields.",
+          "Never invent requirements, deadlines, priorities, certifications, capabilities, or compliance claims.",
+          "Do not generate company answers or claim that the company satisfies anything."
+        ]
+      },
+      "ui": {
+        "position": {
+          "x": 700,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "questions",
+          "from": "question_1"
+        }
+      ]
+    },
+    {
+      "id": "llm_gemini_1",
+      "provider": "llm_openai_api",
+      "name": "AI Requirement Extraction",
+      "config": {
+        "profile": "custom",
+        "custom": {
+          "model": "openai/gpt-oss-120b",
+          "base_url": "https://api.groq.com/openai/v1",
+          "modelTotalTokens": 131072,
+          "apikey": "${ROCKETRIDE_GROQ_KEY}"
+        },
+        "parameters": {}
+      },
+      "ui": {
+        "position": {
+          "x": 928,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "questions",
+          "from": "prompt_1"
+        }
+      ]
+    },
+    {
+      "id": "response_table_1",
+      "provider": "response_table",
+      "config": {
+        "laneName": "table"
+      },
+      "ui": {
+        "position": {
+          "x": 472,
+          "y": 12
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "table",
+          "from": "parse_1"
+        }
+      ]
+    },
+    {
+      "id": "response_answers_1",
+      "provider": "response_answers",
+      "name": "Structured Requirement Output",
+      "config": {
+        "laneName": "requirements"
+      },
+      "ui": {
+        "position": {
+          "x": 1156,
+          "y": 80
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "answers",
+          "from": "llm_gemini_1"
+        }
+      ]
+    },
+    {
+      "id": "response_text_1",
+      "provider": "response_text",
+      "config": {
+        "laneName": "text"
+      },
+      "ui": {
+        "position": {
+          "x": 472,
+          "y": 138
+        },
+        "nodeType": "default",
+        "formDataValid": true
+      },
+      "input": [
+        {
+          "lane": "text",
+          "from": "parse_1"
+        }
+      ]
+    }
+  ],
+  "name": "Bid-Factory RFP Requirement Extraction",
+  "project_id": "70dfea6f-6fdf-4222-952d-4f93bda1d0c5",
+  "version": 1,
+  "docRevision": 4,
+  "isLocked": false,
+  "snapToGrid": true,
+  "snapGridSize": [
+    10,
+    10
+  ]
+}

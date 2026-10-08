@@ -1,0 +1,32 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Environment
+.env
+
+# Data
+data/vector_store/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# AI / IDE tool configs
+.claude/
+.rocketride/
+.github/copilot-instructions.md
+VERIFICATION_CHECKPOINT.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp/test files
+temp.pipe
+test.pdf
