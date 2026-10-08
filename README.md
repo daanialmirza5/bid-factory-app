@@ -1,159 +1,111 @@
-# 🚀 BidFactory: Enterprise RFP Orchestration Pipeline
+# 🚀 BidFactory: Evidence-Grounded RFP Response
 
 **Built for the RocketRide Buildathon – Mumbai Edition by Team HackHer**
 
-## 💡 The Problem We Are Solving
-Every year, enterprise sales and compliance teams waste thousands of manual hours reading dense, 60-page Requests for Proposals (RFPs). Sales engineers are forced to manually extract compliance rules, security requirements, and technical prerequisites, and then cross-reference them against internal knowledge bases just to draft a proposal. 
+## 💡 The Problem
+Responding to a Request for Proposal (RFP) means reading a long document, pulling out every requirement, checking each one against what the company can actually prove, and drafting answers. It is slow, and the riskiest mistake is claiming a capability the company does not have.
 
-**BidFactory completely automates this excruciatingly manual process.** By leveraging advanced natural language NLP combined with Hybrid Vector RAG, BidFactory cuts RFP response turnaround times from 3 weeks to 3 minutes, saving organizations millions in operational overhead while completely eliminating human compliance errors.
-
----
-
-## 🏆 Hackathon Judging Criteria Checkmarks
-We meticulously engineered BidFactory to pass strict enterprise and hackathon requirements:
-* **✅ Real-World Action:** Integrates directly with native email clients to draft proposal approvals and mocks CRM syncs.
-* **✅ Cost Predictable:** The dashboard calculates exact LLM token utilization per run for highly predictable margins.
-* **✅ Batch/Volume Tested:** Allows users to ingest multiple files (PDFs, DOCX, PNGs) simultaneously into the pipeline. 
-* **✅ Security / Human-in-the-loop:** The AI is strictly barred from auto-sending responses. It flags ambiguous requirements for manual `Approve / Reject` review by a sales engineer.
+**BidFactory automates the reading and drafting, but never invents capabilities.** Every answer is grounded in the company's own documents; anything without evidence is flagged for a person to decide.
 
 ---
 
-## 🏗 Pipeline & Orchestration Flow
+## 🔄 How It Works
 
-At the core of BidFactory is our custom `bid_factory.pipe`, deployed via the **RocketRide Cloud SDK**. 
-Instead of relying on fragile, monolithic AI prompts, our system uses a multi-agent orchestration approach:
-
-1. **Intelligent Ingestion:** When a document is uploaded, the system identifies its format. Text documents are shipped to the RocketRide Gemini Node for structural mapping.
-2. **Resilient Failover OCR:** If a user uploads an image-based PDF that the cloud LLM cannot parse, the Python Pipeline automatically intercepts the failure and securely routes it to `Tesseract OCR` for local raster processing.
-3. **Structured AI Extraction:** The mapped document is passed to `openai/gpt-oss-20b` (via Groq), prompting the AI to extract explicit requirements into strict JSON schemas. 
-4. **Hybrid RAG Evidence Search:** We chunk the extracted requirements and embed them to perform Vector Search (Pinecone/Chroma) and Lexical Search (BM25) against the company's internal Knowledge Base. This guarantees the AI only answers based on verified corporate data, effectively eliminating hallucinations.
-5. **AI Synthesis & Human Review:** The pipeline evaluates compliance status, drafts a response, and generates a compliance scorecard. Any ambiguous rules are sent to a robust Human-in-the-loop dashboard.
-
-```mermaid
-graph TD
-    %% Nodes
-    A[Upload RFP Batch] --> B[RocketRide Orchestration]
-    
-    subgraph Ingestion & Failover Layer
-        B --> C{Image or Text?}
-        C -- Text Document --> D[RocketRide Gemini Node]
-        C -- Image Target --> E[Fallback: Native Local OCR]
-        
-        D --> F[Groq Requirement Extraction]
-        E --> F
-    end
-    
-    subgraph Enterprise Evidence RAG
-        F --> G[Vector Embeddings]
-        G --> H[Semantic + Lexical Search]
-        H --> I[Synthesize Against Local KB]
-    end
-    
-    subgraph Compliance Analytics
-        I --> J[Evaluate Compliance Status]
-        J -- "High Confidence" --> K[Generate Answer Draft]
-        J -- "Ambiguous/Risky" --> L[Flag for Human Review]
-    end
-    
-    K --> M[Approve via Dashboard]
-    L --> M
-    M --> N[Sync to CRM & Export DOCX]
-
-    %% Styling
-    style A fill:#f9fafb,stroke:#d1d5db,stroke-width:2px
-    style B fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
-    style C fill:#dcfce7,stroke:#22c55e,stroke-width:2px
-    style G fill:#fef9c3,stroke:#eab308,stroke-width:2px
-    style J fill:#f3e8ff,stroke:#a855f7,stroke-width:2px
-    style N fill:#ffedd5,stroke:#f97316,stroke-width:2px
+```
+RFP upload (PDF / DOCX)
+  → Requirement extraction      RocketRide pipeline calling Groq
+  → Evidence retrieval          hybrid search over the company knowledge base
+  → Compliance analysis         COVERED / PARTIALLY_COVERED / NOT_FOUND / NEEDS_HUMAN_REVIEW
+  → Grounded draft response     written only from retrieved evidence
+  → Human review                approve / revise / reject
+  → Export                      DOCX proposal, CSV compliance matrix
 ```
 
-## ⚙️ How to Run Locally
+1. **Upload.** The backend reads the text of the PDF or Word document.
+2. **Requirement extraction.** The text is sent with extraction instructions to the `bid_factory.pipe` pipeline on RocketRide. The pipeline (`webhook → question → LLM → response`) calls Groq (`openai/gpt-oss-120b` through RocketRide's OpenAI-compatible LLM node) and returns the explicit requirements as structured JSON. The backend validates that JSON against its requirement schema.
+3. **Evidence retrieval.** Each requirement is searched against the knowledge base in `data/knowledge_base/`. Documents are chunked and embedded with `all-MiniLM-L6-v2` (sentence-transformers) and stored in a SQLite vector store. Results are ranked by a hybrid score: 70% semantic similarity, 30% keyword overlap.
+4. **Compliance analysis.** Based on the evidence found, each requirement gets a status and a confidence score. The thresholds are deliberately conservative:
+   - `COVERED`: best match score ≥ 0.70 and at least half the requirement's terms appear in the evidence
+   - `PARTIALLY_COVERED`: best match score ≥ 0.60 with some term overlap
+   - `NEEDS_HUMAN_REVIEW`: related evidence was found but is not conclusive (the evidence is still attached)
+   - `NOT_FOUND`: no relevant evidence at all
 
-### 1. Start the Backend
-Our backend is powered by FastAPI and Uvicorn.
+   Contradictions between the requirement and the evidence, or between evidence sources, are flagged as conflicts.
+5. **Draft response.** Groq drafts a proposal answer **only from the retrieved evidence**. When there is no evidence, the draft says so instead of claiming the capability.
+6. **Human review.** Every draft lands in the review queue; a reviewer approves, revises or rejects it. Nothing is sent automatically.
+7. **Export.** The reviewed bid can be exported as a DOCX proposal or a CSV compliance matrix.
+
+### Why `NOT_FOUND` is a feature
+If the knowledge base has no evidence for a requirement, BidFactory does not guess. It marks the requirement `NOT_FOUND` with 0% confidence and routes it to human review. An RFP that asks for things the company has never documented will therefore show many `NOT_FOUND` items. That is the system refusing to hallucinate.
+
+---
+
+## 🏗 Architecture
+
+```
+User
+ → BidFactory web app (React, hosted as a RocketRide app)
+ → FastAPI backend (Docker on Railway)
+     → RocketRide pipeline bid_factory.pipe → Groq     (requirement extraction)
+     → Knowledge base: SQLite vector store             (evidence retrieval)
+     → Groq                                            (grounded drafting, assistant chat)
+```
+
+| Part | Technology | Where it runs |
+|---|---|---|
+| Web app | React 18, TypeScript, Vite; Firebase email/password sign-in | RocketRide app `team_hackher.bid-factory` |
+| API | FastAPI (Python 3.12), Uvicorn | Railway, built from the `Dockerfile` |
+| AI pipeline | `bid_factory.pipe` (RocketRide) → Groq | RocketRide |
+| Knowledge base | 12 company documents, sentence-transformers embeddings, SQLite | Indexed into the Docker image at build time |
+| Graph enrichment | Neo4j (optional; skipped when not configured) | Local `docker-compose` only |
+
+Bids and review items are held in memory, so they reset when the backend restarts.
+
+---
+
+## ⚙️ Run Locally
+
 ```bash
-# Install dependencies
+# Backend (http://localhost:8000)
 pip install -r requirements.txt
-
-# Start the FastAPI server (Runs on port 8000)
+python scripts/ingest_kb.py          # build the knowledge-base index
 python -m uvicorn backend.main:app --reload --port 8000
-```
 
-### 2. Start the Frontend
-Our dashboard is built with React, TypeScript, and Vite.
-```bash
+# Frontend (http://localhost:3000, proxies /api to the backend)
 cd frontend
-
-# Install packages
 npm install
-
-# Start the Vite development server
 npm run dev
 ```
 
-Navigate to `http://localhost:3000` to view the Workspace Dashboard.
+Copy `.env.example` to `.env` and fill in the values. Key variables:
+
+- `ROCKETRIDE_URI`, `ROCKETRIDE_APIKEY`: RocketRide connection used by the backend to run the pipeline
+- `ROCKETRIDE_GROQ_KEY`: Groq key for drafting and chat in the backend. The pipeline reads the same variable from RocketRide's Variables.
+- `FRONTEND_ORIGINS`: CORS allowlist (JSON list), e.g. `["https://staging.rocketride.ai"]`
+- `AI_FALLBACK_DIRECT_GROQ`: optional; when `true`, extraction calls Groq directly if the pipeline is unavailable. Off by default, so a pipeline failure returns HTTP 503 instead of a silent substitute.
+
+Secrets are only ever read from environment variables or RocketRide Variables; none are stored in the repository.
 
 ---
 
-## Staging
+## 🧪 Tests and Checks
 
-### Environment
-RocketRide Staging (`https://staging.rocketride.ai`)
-
-### Architecture
-- **Pipeline Orchestration**: RocketRide Cloud AI Pipeline (`bid_factory.pipe`)
-- **Backend API**: FastAPI (Python 3.12) / Uvicorn with Hybrid RAG & Compliance Evaluation
-- **Frontend**: React 18, TypeScript, Vite SPA with realtime dashboard
-- **Database / Graph**: SQLite Vector Store + Neo4j Graph Topology (optional)
-- **Container**: Multi-stage Docker deployment (Node 20 build + Python 3.12 runtime)
-
-### Build
 ```bash
-# Frontend production build
-cd frontend
-npm install
-npm run build
-cd ..
-
-# Backend dependency verification
-pip install -r requirements.txt
+python -m pytest                       # backend test suite
+cd frontend && npm run lint && npm run build   # type-check, lint, production build
+rocketride validate bid_factory.pipe   # pipeline validation
+python -m scripts.rr_pipeline_check    # run the pipeline on real_rfp.pdf
 ```
 
-### Run
-```bash
-# Run unified application (serves API and built SPA)
-uvicorn backend.main:app --host 0.0.0.0 --port 8000
+Health check: `GET /api/health` → `{"status": "ok", "service": "BidFactory API"}`
 
-# Or run via Docker Compose
-docker-compose up --build -d
-```
+### Demo documents
+- `demo_assets/Golden_Demo_RFP.docx` (recommended): requirements that match the knowledge base; shows a `PARTIALLY_COVERED` result alongside evidence-backed review items.
+- `real_rfp.pdf`: six short service requirements (support, encryption, availability, security module, backups, response time); each returns related evidence for human review.
+- `real_test_rfp.docx`: a mix of evidence-backed items and `NOT_FOUND` items.
+- `demo_rfp.docx`, `demo_rfp_simple.docx`: further samples.
 
-### Environment Variables
-Configure environment variables using `.env.example`:
-- `ROCKETRIDE_URI`: RocketRide staging URI (`https://staging.rocketride.ai`)
-- `ROCKETRIDE_APIKEY`: RocketRide deployment & execution API key
-- `ROCKETRIDE_DEPLOY_URI`: Deployment target endpoint
-- `ROCKETRIDE_DEPLOY_APIKEY`: API key for deployment target
-- `ROCKETRIDE_GROQ_KEY` / `ROCKETRIDE_GEMINI_KEY`: AI provider keys for pipeline nodes
-- `FRONTEND_ORIGINS`: Allowed CORS origins
-
-### Health Check
-- **API Endpoint**: `GET /api/health` -> `{"status": "ok", "service": "BidFactory API"}`
-- **Docker Healthcheck**: Built-in container healthcheck querying `/api/health`
-
-### Deployment
-Deploy the pipeline artifact to RocketRide Staging using the official RocketRide CLI:
-```bash
-# Validate pipeline configuration
-rocketride validate --uri https://staging.rocketride.ai --apikey $ROCKETRIDE_APIKEY bid_factory.pipe
-
-# Deploy pipeline to registry
-rocketride deploy add --uri https://staging.rocketride.ai --apikey $ROCKETRIDE_DEPLOY_APIKEY bid_factory.pipe
-
-# Bind deployment to team/project
-rocketride deploy publish --uri https://staging.rocketride.ai --apikey $ROCKETRIDE_DEPLOY_APIKEY 70dfea6f-6fdf-4222-952d-4f93bda1d0c5 1
-```
+Requirement extraction uses an LLM, so the exact number and wording of requirements can vary slightly between runs.
 
 ---
 *Developed with ❤️ by **Team HackHer** for the RocketRide Buildathon.*

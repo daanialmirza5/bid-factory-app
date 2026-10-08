@@ -1,48 +1,43 @@
 """Smoke-test bid_factory.pipe on the RocketRide development connection.
 
-Run from the workspace root:  python scripts/rr_pipeline_check.py [document]
-Reads ROCKETRIDE_URI / ROCKETRIDE_APIKEY from .env. Never prints secrets.
+Run from the workspace root:  python -m scripts.rr_pipeline_check [document]
+Sends the document the same way the backend does (locally extracted text plus
+extraction instructions, as text/plain) and validates the result with the
+backend's requirement extractor. Reads ROCKETRIDE_URI / ROCKETRIDE_APIKEY from
+.env. Never prints secrets.
 """
 import asyncio
-import json
 import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 from rocketride import RocketRideClient
 
+from backend.services.requirement_extraction import StructuredAIRequirementExtractor
+from backend.services.rocketride_service import build_pipeline_payload, extract_text
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 async def main(doc: Path) -> int:
     load_dotenv(ROOT / ".env")
+    text = extract_text(doc.name, doc.read_bytes())
+    print(f"extracted {len(text)} characters from {doc.name}")
     client = RocketRideClient()
     await client.connect()
     token = None
     try:
-        started = await client.use(filepath=str(ROOT / "bid_factory.pipe"), pipelineTraceLevel="summary")
-        token = started["token"]
+        token = (await client.use(filepath=str(ROOT / "bid_factory.pipe")))["token"]
         print("task started")
-        mimetype = "application/pdf" if doc.suffix.lower() == ".pdf" else None
-        try:
-            result = await asyncio.wait_for(
-                client.send(token, doc.read_bytes(), objinfo={"name": doc.name}, mimetype=mimetype), timeout=180
-            )
-        except Exception as exc:  # report and fall through to status
-            print(f"send failed: {type(exc).__name__}: {exc}")
-            result = None
-        status = await client.get_task_status(token)
-        print("status:", json.dumps({k: status.get(k) for k in ("state", "error", "errors", "exitCode", "exitMessage") if k in status}, default=str))
-        if result is not None:
-            print("result keys:", sorted(result.keys()))
-            for key in ("requirements", "answers", "text", "table"):
-                if key in result:
-                    print(f"--- {key} (truncated) ---")
-                    print(json.dumps(result[key], default=str)[:1500])
-            if "_trace" in result:
-                print("--- _trace (truncated) ---")
-                print(json.dumps(result["_trace"], default=str)[:3000])
-        return 0 if result and (result.get("requirements") or result.get("answers")) else 1
+        result = await asyncio.wait_for(
+            client.send(token, build_pipeline_payload(text), objinfo={"name": f"{doc.name}.txt"}, mimetype="text/plain"),
+            timeout=180,
+        )
+        extraction = StructuredAIRequirementExtractor().extract_ai({"data": result})
+        print(f"{len(extraction.requirements)} requirements extracted:")
+        for requirement in extraction.requirements:
+            print(f" - {requirement.requirement_text}")
+        return 0 if extraction.requirements else 1
     finally:
         if token:
             try:

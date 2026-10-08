@@ -14,7 +14,6 @@ const BidDetail = () => {
     const [reviews, setReviews] = useState<ReviewItem[]>([]);
     const [activeTab, setActiveTab] = useState('overview');
     const [selectedReq, setSelectedReq] = useState<Requirement | null>(null);
-    const [showToast, setShowToast] = useState(false);
 
     const loadData = useCallback(() => {
         if (!bidId) return;
@@ -66,22 +65,11 @@ const BidDetail = () => {
     };
 
 
-    const handleSyncCRM = () => {
-        // Mock API call to CRM
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
-    };
-
     const estimatedTokens = reqs.length > 0 ? (reqs.length * 212) + 150 : 0;
     const estimatedCost = (estimatedTokens * 0.00005).toFixed(3);
 
     return (
         <div>
-            {showToast && (
-                <div style={{ position: 'fixed', top: 20, right: 20, background: '#10b981', color: 'white', padding: '1rem', borderRadius: '8px', zIndex: 9999, boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-                    ✅ Successfully synced proposal to Salesforce CRM!
-                </div>
-            )}
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h2 className="mb-2">BID WORKSPACE: {bid.rfp.title}</h2>
@@ -91,7 +79,6 @@ const BidDetail = () => {
                     <span className={`badge badge-${bid.processing_status === 'completed' ? 'success' : bid.processing_status === 'failed' ? 'error' : 'info'}`}>
                         {bid.processing_status.toUpperCase()}
                     </span>
-                    <button onClick={handleSyncCRM} className="btn btn-outline text-sm">Sync Salesforce</button>
                     <a href={`mailto:procurement@client.com?subject=Proposal Submission - ${bid.rfp.title}&body=Hello,%0D%0A%0D%0AThe proposal response is fully reviewed and ready for submission.`} className="btn btn-outline text-sm">Draft Email</a>
                     <a href={apiUrl(`/api/bids/${bid.bid_id}/export/docx`)} download className="btn btn-outline text-sm">Export DOCX</a>
                     <a href={apiUrl(`/api/bids/${bid.bid_id}/export/csv`)} download className="btn btn-outline text-sm">Export CSV</a>
@@ -227,6 +214,9 @@ const BidDetail = () => {
                             </div>
                         ) : (
                             <div className="table-container">
+                                <p className="text-muted text-sm" style={{ padding: '0.75rem 1rem', margin: 0 }}>
+                                    Each requirement is checked against the company knowledge base. COVERED and PARTIALLY_COVERED need a strong evidence match; NEEDS_HUMAN_REVIEW means related evidence was found but is not conclusive; NOT_FOUND means no supporting evidence exists, so no capability is claimed.
+                                </p>
                                 <table>
                                     <thead>
                                         <tr>

@@ -42,7 +42,6 @@ class StructuredAIRequirementExtractor:
             raise AIExtractionError("RocketRide AI requirements must be a JSON array.")
         error_candidate = next((c for c in candidates if isinstance(c, str) and c.lstrip().startswith("**LLM error**")), None)
         if error_candidate:
-            print(f"DEBUG LLM CANDIDATE: {candidates}")
             raise AIExtractionError(f"RocketRide LLM returned an error instead of requirements: {error_candidate}")
         try:
             requirements = [ExtractedRequirement.model_validate(self._normalise_candidate(candidate)) for candidate in candidates]
