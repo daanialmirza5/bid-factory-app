@@ -9,8 +9,8 @@ const LandingPage = () => {
             {/* Navbar */}
             <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '1.5rem 3rem', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <img src="/logo.png" alt="BidWise Logo" style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
-                    <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>BidWise</span>
+                    <img src="/logo.png" alt="BidFactory Logo" style={{ width: '32px', height: '32px', borderRadius: '4px' }} />
+                    <span style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.5px' }}>BidFactory</span>
                 </div>
                 <div>
                     <button
@@ -34,7 +34,7 @@ const LandingPage = () => {
                     Automate Your <span style={{ color: '#818cf8' }}>RFP Responses</span> <br />With Enterprise AI
                 </h1>
                 <p style={{ fontSize: '1.25rem', color: '#a1a1aa', maxWidth: '600px', marginBottom: '3rem', lineHeight: 1.6 }}>
-                    BidWise instantly reads complex client requirements, searches your corporate knowledge base, and drafts compliance-perfect proposals in seconds.
+                    BidFactory extracts the requirements from an RFP, searches your company knowledge base for supporting evidence, and drafts grounded responses for your team to review.
                 </p>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -50,13 +50,13 @@ const LandingPage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginTop: '6rem', textAlign: 'left', width: '100%', maxWidth: '1000px' }}>
                     <div style={{ padding: '2rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <Zap size={32} color="#818cf8" style={{ marginBottom: '1rem' }} />
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem', color: '#ffffff' }}>Instant Extraction</h3>
-                        <p style={{ color: '#a1a1aa', lineHeight: 1.5 }}>Automatically extract hundreds of technical requirements from PDFs and Word documents perfectly.</p>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem', color: '#ffffff' }}>Requirement Extraction</h3>
+                        <p style={{ color: '#a1a1aa', lineHeight: 1.5 }}>An AI pipeline on RocketRide pulls the explicit requirements out of PDF and Word RFPs.</p>
                     </div>
                     <div style={{ padding: '2rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <FileText size={32} color="#818cf8" style={{ marginBottom: '1rem' }} />
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem', color: '#ffffff' }}>Graph RAG AI</h3>
-                        <p style={{ color: '#a1a1aa', lineHeight: 1.5 }}>We search your precise internal policies using Neo4j Graph topologies and dense vector embeddings.</p>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem', color: '#ffffff' }}>Evidence Retrieval</h3>
+                        <p style={{ color: '#a1a1aa', lineHeight: 1.5 }}>Each requirement is matched against your internal documents with hybrid semantic and keyword search. No evidence means no claimed capability.</p>
                     </div>
                     <div style={{ padding: '2rem', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <Shield size={32} color="#818cf8" style={{ marginBottom: '1rem' }} />

@@ -37,7 +37,7 @@ const NewRfp = () => {
         setIsUploading(true);
         setUploadError('');
         try {
-            // Orchestrate first file while handling batch visually
+            // Upload the selected RFP
             const res = await API.uploadBid(files[0]);
             setBidId(res.bid_id);
 
@@ -78,13 +78,12 @@ const NewRfp = () => {
                     >
                         <UploadCloud size={48} className="text-primary mb-4" style={{ margin: '0 auto' }} />
                         <h3>Click to browse or drag file here</h3>
-                        <p className="text-muted mt-2">Supports .docx, .pdf, .png, .jpg (Max 25MB Server Limit)</p>
+                        <p className="text-muted mt-2">Supports .pdf and .docx (max 25 MB)</p>
                         <input
                             type="file"
-                            multiple
                             ref={fileInputRef}
                             style={{ display: 'none' }}
-                            accept=".pdf,.docx,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg"
+                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                             onChange={handleFileChange}
                         />
                     </div>
@@ -93,10 +92,10 @@ const NewRfp = () => {
                         <div className="mt-6 p-4 border rounded-md" style={{ backgroundColor: 'var(--surface-color)' }}>
                             <div className="flex justify-between items-center bg-gray-50 p-4 rounded-md border mb-4" style={{ backgroundColor: 'var(--bg-color)' }}>
                                 <div>
-                                    <div style={{ fontWeight: 600 }}>Batch: {files.length} documents selected</div>
-                                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{files[0].name} {files.length > 1 && `+ ${files.length - 1} more`}</div>
+                                    <div style={{ fontWeight: 600 }}>Selected RFP</div>
+                                    <div className="text-muted" style={{ fontSize: '0.75rem' }}>{files[0].name}</div>
                                 </div>
-                                <button className="btn btn-primary" onClick={handleUpload}>Analyze Batch</button>
+                                <button className="btn btn-primary" onClick={handleUpload}>Analyze RFP</button>
                             </div>
 
                             {previewUrl ? (
@@ -181,7 +180,7 @@ const NewRfp = () => {
                                     {uploadError || 'The analysis could not be completed.'}
                                 </p>
                                 <div className="flex gap-4 mt-2">
-                                    <button className="btn btn-outline" onClick={() => { setIsUploading(false); setPipelineState(null); setFiles([]); }}>Upload Different Batch</button>
+                                    <button className="btn btn-outline" onClick={() => { setIsUploading(false); setPipelineState(null); setFiles([]); }}>Upload Another RFP</button>
                                     <button className="btn btn-primary" onClick={() => navigate(`/bids/${bidId}`)}>View Partial Dashboard</button>
                                 </div>
                             </div>
