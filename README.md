@@ -100,7 +100,7 @@ python -m scripts.rr_pipeline_check    # run the pipeline on real_rfp.pdf
 Health check: `GET /api/health` → `{"status": "ok", "service": "BidFactory API"}`
 
 ### Demo documents
-- `demo_assets/Golden_Demo_RFP.docx` (recommended): requirements that match the knowledge base; shows a `PARTIALLY_COVERED` result alongside evidence-backed review items.
+- `demo_assets/Golden_Demo_RFP.docx` (recommended): security and SLA requirements (RBAC, TLS 1.3, AES-256, a 24/7 support clause) that each retrieve supporting evidence from the knowledge base, so the compliance, evidence and draft-response views are fully populated.
 - `real_rfp.pdf`: six short service requirements (support, encryption, availability, security module, backups, response time); each returns related evidence for human review.
 - `real_test_rfp.docx`: a mix of evidence-backed items and `NOT_FOUND` items.
 - `demo_rfp.docx`, `demo_rfp_simple.docx`: further samples.
