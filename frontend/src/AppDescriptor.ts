@@ -18,8 +18,8 @@ import { PUBLIC_API_BASE_URL } from './rocketride.config';
 setApiBaseUrl(PUBLIC_API_BASE_URL);
 
 const descriptor = {
-	id: 'team_hackher.bid-factory',
-	name: 'Bid Factory',
+	id: 'daanialmirza5.bid-factory',
+	name: 'BidFactory',
 	branding: { appName: 'Bid Factory' },
 	app: App,
 };

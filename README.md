@@ -1,6 +1,6 @@
 # 🚀 BidFactory: Evidence-Grounded RFP Response
 
-**Built for the RocketRide Buildathon – Mumbai Edition by Team HackHer**
+**Built for the RocketRide Buildathon – Mumbai Edition**
 
 ## 💡 The Problem
 Responding to a Request for Proposal (RFP) means reading a long document, pulling out every requirement, checking each one against what the company can actually prove, and drafting answers. It is slow, and the riskiest mistake is claiming a capability the company does not have.
@@ -53,7 +53,7 @@ User
 
 | Part | Technology | Where it runs |
 |---|---|---|
-| Web app | React 18, TypeScript, Vite; Firebase email/password sign-in | RocketRide app `team_hackher.bid-factory` |
+| Web app | React 18, TypeScript, Vite; Firebase email/password sign-in | RocketRide app `daanialmirza5.bid-factory` |
 | API | FastAPI (Python 3.12), Uvicorn | Railway, built from the `Dockerfile` |
 | AI pipeline | `bid_factory.pipe` (RocketRide) → Groq | RocketRide |
 | Knowledge base | 12 company documents, sentence-transformers embeddings, SQLite | Indexed into the Docker image at build time |
@@ -108,4 +108,4 @@ Health check: `GET /api/health` → `{"status": "ok", "service": "BidFactory API
 Requirement extraction uses an LLM, so the exact number and wording of requirements can vary slightly between runs.
 
 ---
-*Developed with ❤️ by **Team HackHer** for the RocketRide Buildathon.*
+*Maintained by **Daanial Mirza**. Built for the RocketRide Buildathon.*

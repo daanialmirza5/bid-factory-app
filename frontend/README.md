@@ -1,6 +1,6 @@
 # BidFactory
 
-**Evidence-grounded RFP response by Team HackHer**
+**Evidence-grounded RFP response**
 
 Responding to a Request for Proposal means reading a long document, finding every requirement, checking each one against what your company can actually prove, and drafting answers. BidFactory automates the reading and drafting, and never invents capabilities. Every answer is grounded in your own documents, and anything without evidence is flagged for a person to decide.
 

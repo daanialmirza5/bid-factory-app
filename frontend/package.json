@@ -2,9 +2,9 @@
   "name": "frontend",
   "private": true,
   "appManifest": {
-    "id": "team_hackher.bid-factory",
-    "publisher": "team_hackher",
-    "name": "Bid Factory",
+    "id": "daanialmirza5.bid-factory",
+    "publisher": "daanialmirza5",
+    "name": "BidFactory",
     "description": "AI-powered RFP analysis, compliance verification, and proposal generation platform.",
     "icon": "./icon.svg",
     "readme": "./README.md",
