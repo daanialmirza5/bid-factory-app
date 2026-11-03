@@ -108,4 +108,4 @@ Health check: `GET /api/health` → `{"status": "ok", "service": "BidFactory API
 Requirement extraction uses an LLM, so the exact number and wording of requirements can vary slightly between runs.
 
 ---
-*Maintained by **Daanial Mirza**. Built for the RocketRide Buildathon.*
+*Maintained by **Daanial Baig**. Built for the RocketRide Buildathon.*
