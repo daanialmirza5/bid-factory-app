@@ -1,111 +1,176 @@
-# 🚀 BidFactory: Evidence-Grounded RFP Response
+# BidFactory
 
-**Built for the RocketRide Buildathon – Mumbai Edition**
+**Answer RFPs from evidence you can prove. Anything you can't prove goes to a person.**
 
-## 💡 The Problem
-Responding to a Request for Proposal (RFP) means reading a long document, pulling out every requirement, checking each one against what the company can actually prove, and drafting answers. It is slow, and the riskiest mistake is claiming a capability the company does not have.
+[![CI](https://github.com/daanialmirza5/bid-factory-app/actions/workflows/ci.yml/badge.svg)](https://github.com/daanialmirza5/bid-factory-app/actions/workflows/ci.yml)
+![Tests](https://img.shields.io/badge/tests-72%20passing-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-**BidFactory automates the reading and drafting, but never invents capabilities.** Every answer is grounded in the company's own documents; anything without evidence is flagged for a person to decide.
+**[Open the live demo](https://bid-factory.onrender.com)**: choose **Continue to Enterprise Login**, then **Continue as guest**, and upload [this sample RFP](real_test_rfp.docx). It runs on Render's free tier, so the first request can take about a minute.
 
----
+1st Prize at the RocketRide Buildathon, Mumbai (team entry).
 
-## 🔄 How It Works
+![A bid workspace showing extracted requirements, evidence counts and pending reviews](docs/screenshots/03-overview.png)
 
+## Results at a glance
+
+Measured on 50 labelled requirements against the company knowledge base. The held-out column is the half that played no part in tuning. [Full results](eval/results/latest.md).
+
+| What we measure | Why it matters | All 50 | Held out (25) |
+| --- | --- | --- | --- |
+| **Unsupported requirements wrongly marked Covered** | The costliest bid mistake is claiming what you can't prove | **0 of 20** | **0 of 10** |
+| **Covered labels that were correct** | A reviewer can trust a Covered label | **25 of 25** | **12 of 12** |
+| **Supported requirements marked Covered** | The tool has to save work, not send everything to review | **25 of 30** (83.3%) | **12 of 15** (80%) |
+| **Correct source document ranked first** | Evidence has to come from the right place | **30 of 30** | **15 of 15** |
+
+These numbers come from 12 synthetic company documents and small labelled sets. They describe this configuration and do not predict accuracy on real tenders.
+
+## The problem
+
+Responding to an RFP means reading a long document, pulling out every requirement, checking each one against what the company can prove, and drafting answers. It is slow, and a confident answer that the company can't back up can cost the contract.
+
+BidFactory automates the reading and drafting but leaves the decisions to people. Every answer points to its evidence, and anything without evidence is flagged.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[RFP upload<br/>PDF or DOCX] --> B[Extract requirements<br/>LLM + schema validation]
+    B --> C[Find evidence<br/>70% semantic, 30% keyword]
+    C --> D{Check support}
+    D -->|Figure missing<br/>from evidence| R[Needs human review]
+    D -->|No evidence| N[Not found]
+    D -->|Partial match| P[Partially covered]
+    D -->|Strong match| V[Covered]
+    V --> E[Draft from evidence only]
+    P --> E
+    R --> E
+    E --> F{Figure check}
+    F -->|Unsupported figure| G[Quote the evidence instead]
+    F -->|Passes| H[Review queue]
+    G --> H
+    N --> H
+    H -->|Approved| X[Export DOCX or CSV]
 ```
-RFP upload (PDF / DOCX)
-  → Requirement extraction      RocketRide pipeline calling Groq
-  → Evidence retrieval          hybrid search over the company knowledge base
-  → Compliance analysis         COVERED / PARTIALLY_COVERED / NOT_FOUND / NEEDS_HUMAN_REVIEW
-  → Grounded draft response     written only from retrieved evidence
-  → Human review                approve / revise / reject
-  → Export                      DOCX proposal, CSV compliance matrix
+
+1. **Extract.** The LLM returns requirements as JSON, and each one is validated against a schema. It is told to keep the RFP's wording and never invent requirements.
+2. **Retrieve.** Documents are split into section-sized chunks and embedded with `all-MiniLM-L6-v2` on ONNX Runtime. Results are ranked by 70% semantic similarity and 30% keyword overlap.
+3. **Check support.** A requirement is `COVERED` only if its match score is at least 0.45 and at least half its terms appear in the closest passage. If the requirement states a figure that passage doesn't contain, it goes to human review, because "15 minutes" is not supported by evidence saying "1 hour".
+4. **Draft.** The model sees the requirement and the evidence, and nothing else. A draft containing a figure found in neither is rejected, and the answer falls back to quoting the evidence.
+5. **Review.** Every answer lands in a queue where a person approves, revises or rejects it. Nothing is sent automatically.
+
+## Screens
+
+| Requirements and their evidence | Draft answers |
+| --- | --- |
+| ![Requirements with supporting evidence](docs/screenshots/04-requirements-evidence.png) | ![Drafted responses](docs/screenshots/05-ai-responses.png) |
+
+| Human review queue | Knowledge base search |
+| --- | --- |
+| ![Review queue](docs/screenshots/06-reviews.png) | ![Evidence search with semantic and keyword scores](docs/screenshots/07-knowledge-base.png) |
+
+## How we measure whether the output is correct
+
+The labelled data is in [`eval/gold`](eval/gold). The expected answers were written before the first evaluation run, and anyone can check them against the [knowledge base](data/knowledge_base).
+
+| Stage | Labelled data | Metric | Result |
+| --- | --- | --- | --- |
+| Retrieval | 30 supported requirements with their source documents | Correct document ranked first | 100% (30/30) |
+| Compliance | 30 supported and 20 unsupported requirements | Unsupported marked Covered | 0% (0/20) |
+| Compliance | Same | Covered labels that were correct | 100% (25/25) |
+| Compliance | Same | Supported marked Covered | 83.3% (25/30) |
+| Compliance | Same | Unsupported marked Partial, which always goes to a reviewer | 5% (1/20) |
+| Extraction (LLM) | 25 requirements in 4 RFPs, 3 runs each | Requirements found (recall) | 84% to 94.7% across two evaluation runs |
+| Extraction (LLM) | Same | Output grounded in the source document | 94.5% (69/73) in the latest run |
+| Extraction (LLM) | Same | Runs returning schema-valid JSON | 11 of 12 in the latest run |
+| Extraction (rules) | Same | Requirements found (recall) | 92% (23/25) |
+| Drafting | 45 LLM drafts | Rejected for an unsupported figure | 2.2% (1/45) |
+| Drafting | Same | Final answers with every figure supported | 100% (45/45) |
+| Drafting | 5 requirements with no evidence | Refused rather than claimed | 100% (5/5) |
+
+Compliance checks take about 9 ms per requirement (p50). LLM extraction takes about 4.7 s per document (p50), and drafting about 1.9 s per answer (p50).
+
+**How tuning stays honest.** Thresholds are chosen by [`eval/calibrate.py`](eval/calibrate.py) on the odd-numbered items only: no unsupported requirement may be marked Covered, then as many supported ones as possible. The even-numbered items are held out.
+
+### What the first evaluation found
+
+The first run looked safe but was close to useless, and the existing unit tests had not caught it.
+
+| Metric (all 50 items) | [First run](eval/results/baseline-before-chunking-fix.md) | Now |
+| --- | --- | --- |
+| Supported requirements marked Covered or Partial | 0 of 30 | 30 of 30 |
+| Supported requirements marked Covered | 0 of 30 | 25 of 30 |
+| Correct source document ranked first | 28 of 30 | 30 of 30 |
+| Unsupported requirements wrongly marked Covered | 0 of 20 | 0 of 20 |
+
+- **Root cause.** Each document was stored as one chunk, so a one-sentence requirement was compared with a whole document. Scores stayed between 0.33 and 0.55 and never reached the original hand-set thresholds of 0.60 and 0.70.
+- **Fix.** Section-sized chunks, thresholds calibrated on labelled data, and a check that required figures appear in the evidence.
+- **Other bugs the evaluation exposed.** Direct extraction rewrote "supplier" as "vendor" and skipped schema validation. Draft prompts never included the requirement. One draft stated figures of 5,000 and 10,000 that appear nowhere in the evidence, which is why the figure check exists.
+
+### Reproduce it
+
+```bash
+python scripts/ingest_kb.py
+python -m eval.calibrate                                  # tune on the development half
+python -m eval.run_eval                                   # retrieval, compliance, rule-based extraction
+ROCKETRIDE_GROQ_KEY=... python -m eval.run_eval --llm     # adds LLM extraction and drafting
 ```
 
-1. **Upload.** The backend reads the text of the PDF or Word document.
-2. **Requirement extraction.** The text is sent with extraction instructions to the `bid_factory.pipe` pipeline on RocketRide. The pipeline (`webhook → question → LLM → response`) calls Groq (`openai/gpt-oss-120b` through RocketRide's OpenAI-compatible LLM node) and returns the explicit requirements as structured JSON. The backend validates that JSON against its requirement schema.
-3. **Evidence retrieval.** Each requirement is searched against the knowledge base in `data/knowledge_base/`. Documents are chunked and embedded with `all-MiniLM-L6-v2` (sentence-transformers) and stored in a SQLite vector store. Results are ranked by a hybrid score: 70% semantic similarity, 30% keyword overlap.
-4. **Compliance analysis.** Based on the evidence found, each requirement gets a status and a confidence score. The thresholds are deliberately conservative:
-   - `COVERED`: best match score ≥ 0.70 and at least half the requirement's terms appear in the evidence
-   - `PARTIALLY_COVERED`: best match score ≥ 0.60 with some term overlap
-   - `NEEDS_HUMAN_REVIEW`: related evidence was found but is not conclusive (the evidence is still attached)
-   - `NOT_FOUND`: no relevant evidence at all
+## Tests
 
-   Contradictions between the requirement and the evidence, or between evidence sources, are flagged as conflicts.
-5. **Draft response.** Groq drafts a proposal answer **only from the retrieved evidence**. When there is no evidence, the draft says so instead of claiming the capability.
-6. **Human review.** Every draft lands in the review queue; a reviewer approves, revises or rejects it. Nothing is sent automatically.
-7. **Export.** The reviewed bid can be exported as a DOCX proposal or a CSV compliance matrix.
+72 pytest tests run in [GitHub Actions](https://github.com/daanialmirza5/bid-factory-app/actions) on every push, alongside the frontend lint and production build. They use stubs, so they check behaviour without calling an LLM. The evaluation above is what measures accuracy.
 
-### Why `NOT_FOUND` is a feature
-If the knowledge base has no evidence for a requirement, BidFactory does not guess. It marks the requirement `NOT_FOUND` with 0% confidence and routes it to human review. An RFP that asks for things the company has never documented will therefore show many `NOT_FOUND` items. That is the system refusing to hallucinate.
+| Test file | Tests | What it proves |
+| --- | --- | --- |
+| [`test_orchestration.py`](tests/test_orchestration.py) | 17 | The pipeline runs in order and reports failures |
+| [`test_compliance_analysis.py`](tests/test_compliance_analysis.py) | 10 | Status rules, the figure check, and that unrelated evidence is never Covered |
+| [`test_response_generation.py`](tests/test_response_generation.py) | 9 | Drafts use only evidence, and unsupported figures are rejected |
+| [`test_rocketride_service.py`](tests/test_rocketride_service.py) | 9 | Pipeline calls, the direct fallback, and safe error messages |
+| [`test_review_workflow.py`](tests/test_review_workflow.py) | 8 | Approve, reject and revise transitions |
+| [`test_requirement_extraction.py`](tests/test_requirement_extraction.py) | 6 | Schema validation and rule-based extraction |
+| [`test_conflict_detection.py`](tests/test_conflict_detection.py) | 5 | Contradictions in evidence are flagged |
+| [`test_rag.py`](tests/test_rag.py) | 5 | Ingestion, chunking, retrieval and duplicate handling |
+| [`test_rate_limit.py`](tests/test_rate_limit.py) | 3 | The public demo's limit on LLM calls |
 
----
-
-## 🏗 Architecture
-
+```bash
+python -m pytest
+cd frontend && npm run lint && npm run build
 ```
-User
- → BidFactory web app (React, hosted as a RocketRide app)
- → FastAPI backend (Docker on Railway)
-     → RocketRide pipeline bid_factory.pipe → Groq     (requirement extraction)
-     → Knowledge base: SQLite vector store             (evidence retrieval)
-     → Groq                                            (grounded drafting, assistant chat)
-```
+
+## Architecture
 
 | Part | Technology | Where it runs |
-|---|---|---|
-| Web app | React 18, TypeScript, Vite; Firebase email/password sign-in | RocketRide app `daanialmirza5.bid-factory` |
-| API | FastAPI (Python 3.12), Uvicorn | Railway, built from the `Dockerfile` |
-| AI pipeline | `bid_factory.pipe` (RocketRide) → Groq | RocketRide |
-| Knowledge base | 12 company documents, sentence-transformers embeddings, SQLite | Indexed into the Docker image at build time |
-| Graph enrichment | Neo4j (optional; skipped when not configured) | Local `docker-compose` only |
+| --- | --- | --- |
+| Web app | React 18, TypeScript, Vite, Firebase sign-in or guest access | Served by the API |
+| API | FastAPI, Python 3.12 | Render, from the [`Dockerfile`](Dockerfile) |
+| Extraction | Groq (`openai/gpt-oss-20b`), with an optional [RocketRide pipeline](bid_factory.pipe) | Groq |
+| Knowledge base | 12 documents, fastembed (ONNX), SQLite vector store | Built into the image |
+| Drafting | Groq, with a figure check | API |
 
-Bids and review items are held in memory, so they reset when the backend restarts.
+**The live demo calls Groq directly.** The RocketRide pipeline used at the buildathon is still in the repository and runs when `ROCKETRIDE_URI` and `ROCKETRIDE_APIKEY` are set. The figures above measure the direct route.
 
----
-
-## ⚙️ Run Locally
+## Run locally
 
 ```bash
-# Backend (http://localhost:8000)
 pip install -r requirements.txt
-python scripts/ingest_kb.py          # build the knowledge-base index
+python scripts/ingest_kb.py
 python -m uvicorn backend.main:app --reload --port 8000
 
-# Frontend (http://localhost:3000, proxies /api to the backend)
-cd frontend
-npm install
-npm run dev
+cd frontend && npm install && npm run dev    # http://localhost:3000
 ```
 
-Copy `.env.example` to `.env` and fill in the values. Key variables:
+Copy `.env.example` to `.env`. `ROCKETRIDE_GROQ_KEY` enables the LLM, and `AI_FALLBACK_DIRECT_GROQ=true` calls Groq directly when RocketRide isn't configured. Secrets are read only from the environment.
 
-- `ROCKETRIDE_URI`, `ROCKETRIDE_APIKEY`: RocketRide connection used by the backend to run the pipeline
-- `ROCKETRIDE_GROQ_KEY`: Groq key for drafting and chat in the backend. The pipeline reads the same variable from RocketRide's Variables.
-- `FRONTEND_ORIGINS`: CORS allowlist (JSON list), e.g. `["https://staging.rocketride.ai"]`
-- `AI_FALLBACK_DIRECT_GROQ`: optional; when `true`, extraction calls Groq directly if the pipeline is unavailable. Off by default, so a pipeline failure returns HTTP 503 instead of a silent substitute.
+## Known limitations
 
-Secrets are only ever read from environment variables or RocketRide Variables; none are stored in the repository.
+- The knowledge base is synthetic, and the labelled sets are small. A real tender set is the next step.
+- `Pricing_Guide_2026.docx` has lost its currency amounts (it reads ",000 annually"), so pricing questions can't be answered properly.
+- Extraction varies between runs, and it doesn't yet retry after invalid JSON.
+- Bids and reviews live in memory and reset when the server restarts.
+- Image uploads need Tesseract, which the Docker image doesn't include, so the demo accepts PDF and DOCX.
 
----
+## License
 
-## 🧪 Tests and Checks
-
-```bash
-python -m pytest                       # backend test suite
-cd frontend && npm run lint && npm run build   # type-check, lint, production build
-rocketride validate bid_factory.pipe   # pipeline validation
-python -m scripts.rr_pipeline_check    # run the pipeline on real_rfp.pdf
-```
-
-Health check: `GET /api/health` → `{"status": "ok", "service": "BidFactory API"}`
-
-### Demo documents
-- `demo_assets/Golden_Demo_RFP.docx` (recommended): security and SLA requirements (RBAC, TLS 1.3, AES-256, a 24/7 support clause) that each retrieve supporting evidence from the knowledge base, so the compliance, evidence and draft-response views are fully populated.
-- `real_rfp.pdf`: six short service requirements (support, encryption, availability, security module, backups, response time); each returns related evidence for human review.
-- `real_test_rfp.docx`: a mix of evidence-backed items and `NOT_FOUND` items.
-- `demo_rfp.docx`, `demo_rfp_simple.docx`: further samples.
-
-Requirement extraction uses an LLM, so the exact number and wording of requirements can vary slightly between runs.
-
----
-*Maintained by **Daanial Baig**. Built for the RocketRide Buildathon.*
+[MIT](LICENSE)
