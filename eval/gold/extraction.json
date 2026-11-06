@@ -1,0 +1,50 @@
+{
+  "description": "The explicit requirements a correct extractor should find in each demo RFP.",
+  "documents": [
+    {
+      "path": "demo_assets/Golden_Demo_RFP.docx",
+      "requirements": [
+        "The system must enforce Role-Based Access Control (RBAC) down to the field level.",
+        "All customer data in Transit and at Rest must be encrypted using AES-256 and TLS 1.3 standards.",
+        "The vendor must provide 24/7 Quantum Threat Remediation in their SLA.",
+        "Please confirm the base platform fee for Enterprise deployments."
+      ]
+    },
+    {
+      "path": "real_test_rfp.docx",
+      "requirements": [
+        "The vendor must natively support hosting on AWS Azure GCP platforms.",
+        "The vendor must possess SOC 2 certification.",
+        "The system must guarantee 99.9% availability for all clients.",
+        "The system must feature advanced AI/ML capabilities for MLOps and drift detection.",
+        "The vendor must have completed previous projects building a Healthcare Data Lake.",
+        "The vendor must hold active offices operating in Tokyo, Japan.",
+        "The vendor must enforce data encryption using AES-256 for all at-rest data.",
+        "The vendor must utilize Quantum key distribution.",
+        "The vendor must have an RTO (Recovery Time Objective) of 15 minutes."
+      ]
+    },
+    {
+      "path": "real_rfp.docx",
+      "requirements": [
+        "The supplier must provide 24/7 support.",
+        "The supplier must provide encrypted storage for all data.",
+        "The supplier must provide 99.9% availability.",
+        "The system must include a certified security module.",
+        "The system must support regular automated backups.",
+        "The supplier must have a response time of under 1 hour."
+      ]
+    },
+    {
+      "path": "demo_rfp_simple.docx",
+      "requirements": [
+        "The vendor must guarantee 99.9% availability.",
+        "The vendor must hold SOC 2 certification.",
+        "The vendor must support AWS Azure GCP.",
+        "The vendor must provide data protection.",
+        "The vendor must establish ISO 27001.",
+        "The system must have AI/ML capabilities."
+      ]
+    }
+  ]
+}
