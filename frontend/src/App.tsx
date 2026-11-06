@@ -13,8 +13,14 @@ import Reviews from './pages/Reviews';
 import BidDetail from './pages/BidDetail';
 import { Chatbot } from './components/Chatbot';
 import Login from './pages/Login';
+import { isGuest, leaveGuest } from './guest';
 import LandingPage from './pages/LandingPage';
 import { apiUrl } from './config';
+
+const endSession = () => {
+  leaveGuest();
+  signOut(auth).then(() => { window.location.href = '/'; });
+};
 
 const Sidebar = () => {
   const location = useLocation();
@@ -57,7 +63,7 @@ const Sidebar = () => {
       </nav>
 
       <div className="sidebar-footer">
-        <div className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors" onClick={() => signOut(auth).then(() => window.location.href = '/')}>
+        <div className="flex items-center gap-2 mb-4 cursor-pointer hover:text-primary transition-colors" onClick={endSession}>
           <LogOut size={18} />
           Logout
         </div>
@@ -65,7 +71,7 @@ const Sidebar = () => {
         <div className="system-status">
           <div className={`status-indicator ${!apiConnected ? 'offline' : ''}`} />
           <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-            {apiConnected ? 'RocketRide & Backend Connected' : 'Backend Unavailable'}
+            {apiConnected ? 'Backend Connected' : 'Backend Unavailable'}
           </span>
         </div>
       </div>
@@ -91,9 +97,9 @@ const TopBar = () => {
       <div className="page-title">{getTitle()}</div>
       <div className="flex items-center gap-4">
         {/* Placeholder for user/notifications */}
-        <div className="badge badge-neutral">{auth.currentUser?.email || 'Logged In'}</div>
+        <div className="badge badge-neutral">{auth.currentUser?.email || (isGuest() ? 'Guest demo' : 'Logged In')}</div>
         <button
-          onClick={() => signOut(auth).then(() => window.location.href = '/')}
+          onClick={endSession}
           className="btn btn-outline"
           style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
         >
@@ -109,7 +115,7 @@ function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
+      if (user || isGuest()) {
         setIsAuthenticated(true);
       } else {
         setIsAuthenticated(false);

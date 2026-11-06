@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { auth } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { enterGuest } from '../guest';
 
 const Login = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -81,6 +82,14 @@ const Login = () => {
                         {isLogin ? 'Sign In to Workspace' : 'Create Enterprise Account'}
                     </button>
                 </form>
+                <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ width: '100%', marginTop: '0.75rem', padding: '0.75rem' }}
+                    onClick={() => { enterGuest(); window.location.href = '/bids'; }}
+                >
+                    Continue as guest (public demo)
+                </button>
                 <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.75rem', color: 'gray' }}>
                     Secured by Firebase Enterprise Authentication
                 </div>

@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     # directly instead. Off by default so pipeline failures surface as errors.
     ai_fallback_direct_groq: bool = False
     rocketride_timeout_seconds: float = 120.0
+    # Requests per client per hour on endpoints that spend LLM quota. 0 turns the limit off.
+    llm_rate_limit_per_hour: int = 0
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

@@ -8,6 +8,7 @@ from backend.api.routes import router
 from backend.api.knowledge_base import router as knowledge_base_router
 from backend.utils.config import get_settings
 from backend.utils.errors import register_exception_handlers
+from backend.utils.rate_limit import LLMRateLimitMiddleware
 
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -26,6 +27,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if settings.llm_rate_limit_per_hour > 0:
+    app.add_middleware(LLMRateLimitMiddleware, limit=settings.llm_rate_limit_per_hour)
 
 register_exception_handlers(app)
 app.include_router(router, prefix="/api")
