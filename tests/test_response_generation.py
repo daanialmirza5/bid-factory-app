@@ -117,3 +117,22 @@ def test_conflict_forces_review_without_changing_compliance_status() -> None:
 
     assert response.compliance_status == "COVERED"
     assert response.needs_human_review is True
+
+
+def test_figure_check_rejects_numbers_missing_from_the_evidence() -> None:
+    from backend.services.response_generation import unsupported_numbers
+
+    assert unsupported_numbers("Enterprise deployments cost 5,000 per year.", "The fee is listed annually.", "Confirm the fee.") == ["5,000"]
+
+
+def test_figure_check_allows_numbers_from_the_evidence_and_requirement() -> None:
+    from backend.services.response_generation import unsupported_numbers
+
+    draft = "The requirement asks for 15 minutes, but our documented RTO is 1 hour."
+    assert unsupported_numbers(draft, "Our RTO is 1 hour.", "RTO of 15 minutes.") == []
+
+
+def test_figure_check_ignores_list_numbering() -> None:
+    from backend.services.response_generation import unsupported_numbers
+
+    assert unsupported_numbers("1. We encrypt data.\n2) We rotate keys.", "We encrypt data and rotate keys.") == []

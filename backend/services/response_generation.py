@@ -1,3 +1,6 @@
+import logging
+import re
+from collections import Counter
 from collections.abc import Iterable
 
 from backend.schemas.compliance import ComplianceResult, ComplianceStatus
@@ -5,6 +8,21 @@ from backend.schemas.compliance import ConflictSeverity
 from backend.schemas.rag import RetrievalResult
 from backend.schemas.requirements import ExtractedRequirement
 from backend.schemas.response_generation import ProposedBidResponse, RequirementResponse
+
+
+logger = logging.getLogger(__name__)
+
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
+_LIST_MARKER = re.compile(r"^\s*\d+[.)]\s", re.MULTILINE)
+
+# Counts LLM drafts and how many the figure check rejected; read by eval/run_eval.py.
+draft_stats: Counter[str] = Counter()
+
+
+def unsupported_numbers(draft: str, *sources: str) -> list[str]:
+    """Return figures in a draft that appear in none of the sources. List numbering is ignored."""
+    available = {number for source in sources for number in _NUMBER.findall(source)}
+    return [number for number in _NUMBER.findall(_LIST_MARKER.sub("", draft)) if number not in available]
 
 
 class ResponseGenerationService:
@@ -50,10 +68,10 @@ class ResponseGenerationService:
             and compliance.conflict_analysis.severity is not ConflictSeverity.no_conflict
         )
         if compliance.status is ComplianceStatus.covered and evidence:
-            proposed_response = self._covered_response(evidence)
+            proposed_response = self._covered_response(evidence, compliance.requirement.requirement_text)
             needs_human_review = has_conflict
         elif compliance.status is ComplianceStatus.partially_covered and evidence:
-            proposed_response = self._partial_response(evidence)
+            proposed_response = self._partial_response(evidence, compliance.requirement.requirement_text)
             needs_human_review = True
         elif compliance.status is ComplianceStatus.not_found or not evidence:
             status = ComplianceStatus.not_found.value
@@ -65,7 +83,8 @@ class ResponseGenerationService:
             proposed_response = self._draft_with_llm(
                 statements,
                 "The evidence is ambiguous. Draft the best response you can, but note that it requires human review.",
-                f"Based on available evidence in {refs}: {statements}. However, ambiguity in the match requires human review."
+                f"Based on available evidence in {refs}: {statements}. However, ambiguity in the match requires human review.",
+                compliance.requirement.requirement_text,
             )
             needs_human_review = True
         return RequirementResponse(
@@ -79,27 +98,29 @@ class ResponseGenerationService:
         )
 
     @classmethod
-    def _covered_response(cls, evidence: list[RetrievalResult]) -> str:
+    def _covered_response(cls, evidence: list[RetrievalResult], requirement: str = "") -> str:
         refs = ", ".join(cls._reference(item) for item in evidence)
         statements = " ".join(item.retrieved_text for item in evidence)
         return cls._draft_with_llm(
             statements,
             "This requirement is fully covered based on our documentation.",
-            f"The company satisfies this requirement based on verified evidence in {refs}: {statements}"
+            f"The company satisfies this requirement based on verified evidence in {refs}: {statements}",
+            requirement,
         )
 
     @classmethod
-    def _partial_response(cls, evidence: list[RetrievalResult]) -> str:
+    def _partial_response(cls, evidence: list[RetrievalResult], requirement: str = "") -> str:
         refs = ", ".join(cls._reference(item) for item in evidence)
         statements = " ".join(item.retrieved_text for item in evidence)
         return cls._draft_with_llm(
             statements,
             "This requirement is only partially covered based on our documentation. Emphasize what we DO have.",
-            f"The company partially satisfies this requirement based on {refs}: {statements}. However, remaining requirement details require further verification."
+            f"The company partially satisfies this requirement based on {refs}: {statements}. However, remaining requirement details require further verification.",
+            requirement,
         )
         
     @staticmethod
-    def _draft_with_llm(evidence_text: str, context: str, fallback_text: str) -> str:
+    def _draft_with_llm(evidence_text: str, context: str, fallback_text: str, requirement: str = "") -> str:
         import os
         import groq
         api_key = os.getenv("ROCKETRIDE_GROQ_KEY") or os.getenv("GROQ_API_KEY")
@@ -112,17 +133,26 @@ class ResponseGenerationService:
                 messages=[
                     {
                         "role": "system",
-                        "content": f"You are a professional B2B RFP proposal writer. You will be provided with internal company evidence. Write a highly professional, definitive, and persuasive response to the requirement based strictly on the provided evidence. DO NOT make up information. {context}"
+                        "content": f"You are a professional B2B RFP proposal writer. You will be provided with internal company evidence. Write a professional response to the requirement based strictly on the provided evidence. Do not make up information, and use only figures that appear in the evidence. If the evidence does not fully answer the requirement, say which part is not confirmed. Write two or three plain sentences with no tables, headings or lists. {context}"
                     },
                     {
                         "role": "user",
-                        "content": evidence_text[:10000]
+                        "content": f"Requirement:\n{requirement}\n\nCompany evidence:\n{evidence_text[:10000]}"
                     }
                 ],
                 temperature=0.2,
                 max_tokens=500,
             )
-            return completion.choices[0].message.content
+            draft = completion.choices[0].message.content
+            if not draft or not draft.strip():
+                return fallback_text
+            draft_stats["drafted"] += 1
+            invented = unsupported_numbers(draft, evidence_text, requirement)
+            if invented:
+                draft_stats["rejected"] += 1
+                logger.warning("Rejected a draft with figures not in the evidence: %s", invented)
+                return fallback_text
+            return draft
         except Exception as e:
             print("Groq API error in generation:", e)
             return fallback_text

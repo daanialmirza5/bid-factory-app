@@ -191,7 +191,7 @@ class RocketRideService:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a requirement extraction AI designed for processing RFPs and Bids. Extract a concise, definitive list of requirements from the provided RFP text. Output each requirement as a single sentence starting with 'The vendor must' or 'The system must'. Make sure to list all distinct requirements found in the text."
+                        "content": " ".join(EXTRACTION_INSTRUCTIONS),
                     },
                     {
                         "role": "user",
@@ -199,7 +199,7 @@ class RocketRideService:
                     }
                 ],
                 temperature=0.1,
-                max_tokens=1024,
+                max_tokens=4096,
             )
             generated_text = completion.choices[0].message.content
             if not generated_text or not generated_text.strip():
