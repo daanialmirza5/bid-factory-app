@@ -65,9 +65,6 @@ const BidDetail = () => {
     };
 
 
-    const estimatedTokens = reqs.length > 0 ? (reqs.length * 212) + 150 : 0;
-    const estimatedCost = (estimatedTokens * 0.00005).toFixed(3);
-
     return (
         <div>
             <div className="flex justify-between items-start mb-6">
@@ -110,11 +107,6 @@ const BidDetail = () => {
                         <div className="metric-card">
                             <div className="metric-title flex gap-2 items-center"><AlertTriangle size={16} /> Reviews Pending</div>
                             <div className="metric-value text-warning" style={{ color: 'var(--status-warning)' }}>{reviews.filter(r => r.review_status === 'PENDING').length}</div>
-                        </div>
-                        <div className="metric-card">
-                            <div className="metric-title flex gap-2 items-center text-muted">Tokens Used</div>
-                            <div className="metric-value">~{estimatedTokens}</div>
-                            <div className="text-xs mt-1 text-muted">Est. Cost: ${estimatedCost}</div>
                         </div>
                     </div>
 

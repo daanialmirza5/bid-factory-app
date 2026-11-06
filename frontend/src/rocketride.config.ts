@@ -4,4 +4,4 @@
 // a build does provide it, takes precedence.
 const env = import.meta.env as Record<string, string | undefined>;
 
-export const PUBLIC_API_BASE_URL = env.PUBLIC_API_BASE_URL || 'https://bid-factory-app-production.up.railway.app';
+export const PUBLIC_API_BASE_URL = env.PUBLIC_API_BASE_URL || 'https://bid-factory.onrender.com';
