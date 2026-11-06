@@ -8,6 +8,11 @@ class EmbeddingProvider(Protocol):
 
 
 class SentenceTransformerEmbeddingService:
+    """Sentence-transformer embeddings on ONNX Runtime.
+
+    This runs the same model without PyTorch, so the API fits in a 512 MB container.
+    """
+
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
         self._model = None
@@ -16,11 +21,13 @@ class SentenceTransformerEmbeddingService:
         if not texts:
             return []
         try:
-            from sentence_transformers import SentenceTransformer
+            from fastembed import TextEmbedding
 
             if self._model is None:
-                self._model = SentenceTransformer(self.model_name)
-            vectors = self._model.encode(texts, normalize_embeddings=True)
-            return np.asarray(vectors, dtype=np.float32).tolist()
+                name = self.model_name if "/" in self.model_name else f"sentence-transformers/{self.model_name}"
+                self._model = TextEmbedding(model_name=name)
+            vectors = np.asarray(list(self._model.embed(texts)), dtype=np.float32)
+            norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+            return (vectors / np.clip(norms, 1e-12, None)).tolist()
         except Exception as exc:
             raise RuntimeError(f"Unable to generate embeddings with model '{self.model_name}'.") from exc

@@ -14,7 +14,8 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8000
+    PORT=8000 \
+    FASTEMBED_CACHE_PATH=/app/.fastembed
 
 # Install runtime system packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
