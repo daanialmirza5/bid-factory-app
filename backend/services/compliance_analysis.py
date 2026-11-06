@@ -20,7 +20,14 @@ class ComplianceAnalysisService:
     _STOP_WORDS = {
         "a", "an", "and", "are", "be", "by", "for", "from", "in", "is", "it", "of", "on",
         "or", "shall", "should", "that", "the", "their", "this", "to", "with",
+        "must", "have", "has", "vendor", "supplier", "system", "solution",
     }
+    _NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
+
+    # Calibrated with eval/calibrate.py on the development half of eval/gold/compliance.json.
+    COVERED_SCORE = 0.45
+    COVERED_OVERLAP = 0.50
+    PARTIAL_SCORE = 0.35
 
     def __init__(self, retriever: EvidenceRetriever) -> None:
         self._retriever = retriever
@@ -48,15 +55,21 @@ class ComplianceAnalysisService:
 
         strongest = max(evidence, key=lambda item: item.similarity_score)
         requirement_terms = self._terms(requirement.requirement_text)
-        evidence_terms = self._terms(" ".join(item.retrieved_text for item in evidence))
+        evidence_terms = self._terms(strongest.retrieved_text)
         overlap = len(requirement_terms & evidence_terms) / len(requirement_terms) if requirement_terms else 0.0
         score = max(0.0, min(1.0, strongest.similarity_score))
+        missing_numbers = self._missing_numbers(requirement.requirement_text, strongest.retrieved_text)
 
-        if score >= 0.70 and overlap >= 0.5:
+        if missing_numbers:
+            # A semantically close passage with a different figure is not support: 15 minutes is not 1 hour.
+            status = ComplianceStatus.needs_human_review
+            confidence = min(1.0, 0.5 * score)
+            explanation = f"The closest evidence does not state the required figure(s): {', '.join(missing_numbers)}."
+        elif score >= self.COVERED_SCORE and overlap >= self.COVERED_OVERLAP:
             status = ComplianceStatus.covered
             confidence = min(1.0, score + 0.3)
             explanation = "Retrieved evidence strongly supports the requirement."
-        elif score >= 0.60 and overlap > 0:
+        elif score >= self.PARTIAL_SCORE and overlap > 0:
             status = ComplianceStatus.partially_covered
             confidence = min(1.0, score + 0.1)
             explanation = "Retrieved evidence supports only part of the requirement."
@@ -81,11 +94,24 @@ class ComplianceAnalysisService:
         return [result for result in raw_results if isinstance(result, RetrievalResult)]
 
     @classmethod
+    def _missing_numbers(cls, requirement: str, evidence: str) -> list[str]:
+        available = set(cls._NUMBER.findall(evidence))
+        return [number for number in cls._NUMBER.findall(requirement) if number not in available]
+
+    @classmethod
     def _terms(cls, text: str) -> set[str]:
         return {
-            term for term in re.findall(r"[a-z0-9]+", text.lower())
+            cls._stem(term) for term in re.findall(r"[a-z0-9]+", text.lower())
             if len(term) > 2 and term not in cls._STOP_WORDS
         }
+
+    @staticmethod
+    def _stem(term: str) -> str:
+        """Treat encrypts, encrypted and encrypting as the same word when comparing terms."""
+        for suffix in ("ing", "ed", "es", "s"):
+            if term.endswith(suffix) and len(term) - len(suffix) >= 4:
+                return term[: -len(suffix)]
+        return term
 
 
 @dataclass(frozen=True)

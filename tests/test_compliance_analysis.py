@@ -63,12 +63,47 @@ def test_missing_evidence_is_not_found() -> None:
 
 
 def test_ambiguous_evidence_requires_human_review() -> None:
-    retriever = StubRetriever([evidence("The company offers storage services and customer support.", 0.52)])
+    retriever = StubRetriever([evidence("The company offers storage services and customer support.", 0.30)])
 
     result = ComplianceAnalysisService(retriever).analyze([requirement()]).results[0]
 
     assert result.status == ComplianceStatus.needs_human_review
     assert result.evidence_missing is False
+
+
+def test_close_evidence_with_a_different_figure_is_not_covered() -> None:
+    retriever = StubRetriever([evidence("We have a Recovery Time Objective (RTO) of 1 hour.", 0.92)])
+
+    result = ComplianceAnalysisService(retriever).analyze(
+        [requirement("The vendor must have a Recovery Time Objective of 15 minutes.")]
+    ).results[0]
+
+    assert result.status == ComplianceStatus.needs_human_review
+    assert "15" in result.explanation
+
+
+def test_a_higher_availability_figure_is_not_matched_by_a_lower_one() -> None:
+    retriever = StubRetriever([evidence("We guarantee 99.9% uptime and availability.", 0.92)])
+
+    result = ComplianceAnalysisService(retriever).analyze(
+        [requirement("The vendor must guarantee 99.999% uptime.")]
+    ).results[0]
+
+    assert result.status == ComplianceStatus.needs_human_review
+
+
+def test_matching_figure_can_be_covered() -> None:
+    retriever = StubRetriever([evidence("We guarantee 99.9% uptime and availability.", 0.92)])
+
+    result = ComplianceAnalysisService(retriever).analyze(
+        [requirement("The vendor must guarantee 99.9% uptime.")]
+    ).results[0]
+
+    assert result.status == ComplianceStatus.covered
+
+
+def test_word_forms_count_as_the_same_term() -> None:
+    assert ComplianceAnalysisService._terms("encrypts") == ComplianceAnalysisService._terms("encrypted")
 
 
 def test_unrelated_evidence_never_becomes_covered() -> None:
